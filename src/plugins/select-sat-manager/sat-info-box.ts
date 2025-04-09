@@ -37,6 +37,7 @@ export class SatInfoBox extends KeepTrackPlugin {
   dependencies_: string[] = [SelectSatManager.name];
   private selectSatManager_: SelectSatManager;
   private isVisible_ = false;
+  private isCollapseListenersAdded_ = false;
 
   constructor() {
     super();
@@ -49,7 +50,6 @@ export class SatInfoBox extends KeepTrackPlugin {
   private issecondaryDataLoaded_ = false;
   private issensorInfoLoaded_ = false;
   private islaunchDataLoaded_ = false;
-  private issatMissionDataLoaded_ = false;
   private isTopLinkEventListenersAdded_ = false;
   private isActionsSectionCollapsed_ = true;
   private isIdentifiersSectionCollapsed_ = false;
@@ -57,7 +57,6 @@ export class SatInfoBox extends KeepTrackPlugin {
   private isSecondaryDataSectionCollapsed_ = false;
   private isSensorDataSectionCollapsed_ = false;
   private isObjectDataSectionCollapsed_ = false;
-  private isMissionSectionCollapsed_ = false;
 
   currentTEARR = <TearrData>{
     az: 0,
@@ -108,13 +107,6 @@ export class SatInfoBox extends KeepTrackPlugin {
           this.show();
         }
       },
-    });
-
-    // Register mission data
-    keepTrackApi.register({
-      event: KeepTrackApiEvents.selectSatData,
-      cbName: `${this.id}_satMissionData`,
-      cb: SatInfoBox.updateSatMissionData_.bind(this),
     });
 
     // Register object data
@@ -436,24 +428,26 @@ export class SatInfoBox extends KeepTrackPlugin {
       this.islaunchDataLoaded_ = true;
     }
 
-    if (!this.issatMissionDataLoaded_) {
-      SatInfoBox.createSatMissionData();
-      this.issatMissionDataLoaded_ = true;
-    }
-
     // Now that is is loaded, reset the sizing and location
     SatInfoBox.resetMenuLocation(getEl(SatInfoBox.containerId_), false);
 
-    this.addListenerToCollapseElement_(getEl('actions-section-collapse'), getEl('actions-section'), { value: this.isActionsSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('identifiers-section-collapse'), getEl('sat-identifier-data'), { value: this.isIdentifiersSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('orbit-data-section-collapse'), getEl('orbital-section'), { value: this.isOrbitalSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('secondary-sat-info-collapse'), getEl('secondary-sat-info'), { value: this.isSecondaryDataSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('sensor-data-section-collapse'), getEl('sensor-sat-info'), { value: this.isSensorDataSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('object-data-section-collapse'), getEl('launch-section'), { value: this.isObjectDataSectionCollapsed_ });
-    this.addListenerToCollapseElement_(getEl('mission-section-collapse'), getEl('sat-mission-data'), { value: this.isMissionSectionCollapsed_ });
+    if (!this.isCollapseListenersAdded_) {
+      this.addListenerToCollapseElement_(getEl('actions-section-collapse'), getEl('actions-section'), { value: this.isActionsSectionCollapsed_ });
+      this.addListenerToCollapseElement_(getEl('identifiers-section-collapse'), getEl('sat-identifier-data'), { value: this.isIdentifiersSectionCollapsed_ });
+      this.addListenerToCollapseElement_(getEl('orbit-data-section-collapse'), getEl('orbital-section'), { value: this.isOrbitalSectionCollapsed_ });
+      this.addListenerToCollapseElement_(getEl('secondary-sat-info-collapse'), getEl('secondary-sat-info'), { value: this.isSecondaryDataSectionCollapsed_ });
+      this.addListenerToCollapseElement_(getEl('sensor-data-section-collapse'), getEl('sensor-sat-info'), { value: this.isSensorDataSectionCollapsed_ });
+      this.addListenerToCollapseElement_(getEl('object-data-section-collapse'), getEl('launch-section'), { value: this.isObjectDataSectionCollapsed_ });
+
+      this.isCollapseListenersAdded_ = true;
+    }
   }
 
   private addListenerToCollapseElement_(collapseEl: HTMLElement, section: HTMLElement, isCollapsedRef: { value: boolean }): void {
+    if (!collapseEl || !section) {
+      return;
+    }
+
     collapseEl.addEventListener('click', () => {
       section.classList.toggle('collapsed');
       collapseEl.classList.toggle('collapse-closed');
@@ -736,13 +730,13 @@ export class SatInfoBox extends KeepTrackPlugin {
 
     SatInfoBox.updateLaunchVehicleCorrelationTable_(obj, missileLV, satLvString);
 
-    if (satMisl.isMissile()) {
-      return;
-    }
+    // if (satMisl.isMissile()) {
+    //   return;
+    // }
 
-    const sat = satMisl as DetailedSatellite;
+    // const sat = satMisl as DetailedSatellite;
 
-    getEl('sat-configuration').innerHTML = sat.configuration !== '' ? sat.configuration : 'Unknown';
+    // getEl('sat-configuration').innerHTML = sat.configuration !== '' ? sat.configuration : 'Unknown';
   }
 
   private static updateLaunchVehicleCorrelationTable_(obj: BaseObject, missileLV: string, satLvString: string) {
@@ -853,12 +847,12 @@ export class SatInfoBox extends KeepTrackPlugin {
                 <div id="sat-sitec">LAUNCH COUNTRY</div>
               </div>
               </div>
-            <div class="sat-info-row">
+            <div class="sat-info-row" style="display: none;">
               <div class="sat-info-key" data-position="top" data-delay="50"
                 data-tooltip="Space Lift Vehicle That Launched Object">Rocket</div>
               <div class="sat-info-value pointable" id="sat-vehicle">VEHICLE</div>
             </div>
-            <div class="sat-info-row sat-only-info">
+            <!-- <div class="sat-info-row" style="display: none;">
               <div class="sat-info-key" data-position="top" data-delay="50"
                 data-tooltip="Configuration of the Rocket">
                 Configuration
@@ -866,7 +860,7 @@ export class SatInfoBox extends KeepTrackPlugin {
               <div class="sat-info-value" id="sat-configuration">
                 NO DATA
               </div>
-            </div>
+            </div> -->
             <div class="sat-info-row sat-only-info">
               <div class="sat-info-key" data-position="top" data-delay="50"
                 data-tooltip="Radar Cross Section - How reflective the object is to a radar">
@@ -874,7 +868,7 @@ export class SatInfoBox extends KeepTrackPlugin {
               </div>
               <div class="sat-info-value" data-position="top" data-delay="50" id="sat-rcs">NO DATA</div>
             </div>
-            <div class="sat-info-row sat-only-info">
+            <!-- <div class="sat-info-row" style="display: none;">
               <div class="sat-info-key" data-position="top" data-delay="50"
                 data-tooltip="Standard Magnitude - Smaller Numbers Are Brighter">
                 Standard Mag
@@ -882,7 +876,7 @@ export class SatInfoBox extends KeepTrackPlugin {
               <div class="sat-info-value" id="sat-stdmag">
                 NO DATA
               </div>
-            </div>
+            </div> -->
           </div>
           `,
     );
@@ -976,17 +970,17 @@ export class SatInfoBox extends KeepTrackPlugin {
             data-tooltip="USSF Catalog Number - Originally North American Air Defense (NORAD)">NORAD</div>
             <div class="sat-info-value" id="sat-objnum" data-position="top" data-delay="50">99999</div>
           </div>
-          <div class="sat-info-row sat-only-info">
+          <div class="sat-info-row sat-only-info" style="display: none;">
             <div class="sat-info-key">Alt Name</div>
             <div class="sat-info-value" id="sat-alt-name">Alt Name</div>
           </div>
-          <div class="sat-info-row sat-only-info">
+          <div class="sat-info-row sat-only-info" style="display: none;">
             <div class="sat-info-key">Alt ID</div>
             <div class="sat-info-value" id="sat-altid">99999</div>
           </div>
           <div class="sat-info-row sat-only-info">
             <div class="sat-info-key">Source</div>
-            <div class="sat-info-value" id="sat-source">USSF</div>
+            <div class="sat-info-value" id="sat-source">Celestrak</div>
           </div>
           <!-- <div class="sat-info-row sat-only-info">
             <div class="sat-info-key">Confidence</div>
@@ -1228,262 +1222,6 @@ export class SatInfoBox extends KeepTrackPlugin {
       satRcsEl.setAttribute('data-tooltip', 'Unknown');
       // satRcsEl.setAttribute('data-tooltip', `${SatMath.mag2db(sat.rcs).toFixed(2)} dBsm`);
     }
-  }
-
-  private static updateSatMissionData_(obj?: BaseObject) {
-    if (obj === null || typeof obj === 'undefined') {
-      return;
-    }
-
-    if (obj.isSatellite()) {
-      const sat = obj as DetailedSatellite;
-
-      keepTrackApi.containerRoot.querySelectorAll('.sat-only-info')?.forEach((el) => {
-        (<HTMLElement>el).style.display = 'flex';
-      });
-      let satUserDom = getEl('sat-user');
-      const satUserString = StringExtractor.extractUserUrl(sat?.owner); // Replace with link if available
-
-      satUserDom.innerHTML = satUserString;
-      const tempEl = satUserDom.cloneNode(true);
-
-      satUserDom.parentNode.replaceChild(tempEl, satUserDom);
-      satUserDom = tempEl as HTMLElement;
-
-      if (satUserString.includes('http')) {
-        satUserDom.classList.add('pointable');
-        satUserDom.addEventListener('click', (e) => {
-          e.preventDefault();
-          const href = (<HTMLAnchorElement>satUserDom.firstChild).href;
-
-          if (href.includes('http')) {
-            openColorbox(href);
-          }
-        });
-      } else {
-        satUserDom.classList.remove('pointable');
-      }
-
-
-      getEl('sat-purpose').innerHTML = sat?.purpose && sat?.purpose !== '' ? sat?.purpose : 'Unknown';
-      getEl('sat-contractor').innerHTML = sat?.manufacturer && sat?.manufacturer !== '' ? sat?.manufacturer : 'Unknown';
-      // Update with other mass options
-      getEl('sat-launchMass').innerHTML = sat?.launchMass && sat?.launchMass !== '' ? `${sat?.launchMass} kg` : 'Unknown';
-      getEl('sat-dryMass').innerHTML = sat?.dryMass && sat?.dryMass !== '' ? `${sat?.dryMass} kg` : 'Unknown';
-      getEl('sat-lifetime').innerHTML = sat?.lifetime && sat?.lifetime !== '' ? `${sat?.lifetime} yrs` : 'Unknown';
-      getEl('sat-power').innerHTML = sat?.power && sat?.power !== '' ? `${sat?.power} w` : 'Unknown';
-      if (!sat?.vmag && sat?.vmag !== 0) {
-        sat.vmag = SatInfoBox.calculateStdMag_(sat);
-      }
-      getEl('sat-stdmag').innerHTML = sat?.vmag && sat?.vmag?.toFixed(2) !== '' ? sat?.vmag?.toFixed(2) : 'Unknown';
-      getEl('sat-bus').innerHTML = sat?.bus && sat?.bus !== '' ? sat?.bus : 'Unknown';
-      getEl('sat-configuration').innerHTML = sat?.configuration && sat?.configuration !== '' ? sat?.configuration : 'Unknown';
-      getEl('sat-payload').innerHTML = sat?.payload && sat?.payload !== '' ? sat?.payload : 'Unknown';
-      getEl('sat-motor').innerHTML = sat?.motor && sat?.motor !== '' ? sat?.motor : 'Unknown';
-      getEl('sat-length').innerHTML = sat?.length && sat?.length !== '' ? `${sat?.length} m` : 'Unknown';
-      getEl('sat-diameter').innerHTML = sat?.diameter && sat?.diameter !== '' ? `${sat?.diameter} m` : 'Unknown';
-      getEl('sat-span').innerHTML = sat?.span && sat?.span !== '' ? `${sat?.span} m` : 'Unknown';
-      getEl('sat-shape').innerHTML = sat?.shape && sat?.shape !== '' ? sat?.shape : 'Unknown';
-    } else {
-      (<HTMLElement>keepTrackApi.containerRoot.querySelector('.sat-only-info')).style.display = 'none';
-    }
-  }
-
-  private static calculateStdMag_(obj: DetailedSatellite): number {
-    if (obj.vmag) {
-      return obj.vmag;
-    }
-
-    const similarVmag = [];
-    const catalogManager = keepTrackApi.getCatalogManager();
-    const curSatType = obj.type;
-    const curSatId = obj.id;
-    const curSatCountry = obj.country;
-    const curSatName = obj.name.toLowerCase();
-
-    catalogManager.getSats().forEach((posSat) => {
-      if (!posSat.vmag) {
-        return;
-      }
-      if (curSatCountry !== posSat.country) {
-        // Only look at same country
-        return;
-      }
-      if (curSatType !== posSat.type) {
-        // Only look at same type of curSat
-        return;
-      }
-      if (curSatId === posSat.id) {
-        // Don't look at the same curSat
-        return;
-      }
-
-      similarVmag.push(posSat.vmag);
-
-      // Only use the first word of the name
-      const posName = posSat.name.toLowerCase();
-
-      if (curSatName.length < 4 || posName.length < 4) {
-        return;
-      }
-
-      // Determine how many characters match
-      const matchingChars = curSatName.split('').filter((char, index) => char === posName[index]);
-
-      if (matchingChars.length / curSatName.length > 0.85) {
-        similarVmag.push(posSat.vmag);
-        similarVmag.push(posSat.vmag);
-        similarVmag.push(posSat.vmag);
-      }
-    });
-
-    if (similarVmag.length > 0) {
-      const avgVmag = similarVmag.reduce((a, b) => a + b, 0) / similarVmag.length;
-
-
-      return avgVmag;
-    }
-
-    return null;
-  }
-
-  private static createSatMissionData() {
-    getEl(SatInfoBox.containerId_).insertAdjacentHTML(
-      'beforeend',
-      keepTrackApi.html`
-        <div id="sat-mission-data">
-          <div class="sat-info-section-header">
-            Mission
-            <span id="mission-section-collapse" class="section-collapse material-icons" style="position: absolute; right: 0;">expand_less</span>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Primary User of the Satellite">
-              User
-            </div>
-            <div class="sat-info-value" id="sat-user">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Main Function of the Satellite">
-              Purpose
-            </div>
-            <div class="sat-info-value" id="sat-purpose">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Contractor Who Built the Satellite">
-              Contractor
-            </div>
-            <div class="sat-info-value" id="sat-contractor">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Mass at Lift Off">
-              Lift Mass
-            </div>
-            <div class="sat-info-value" id="sat-launchMass">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50" data-tooltip="Unfueled Mass">
-              Dry Mass
-            </div>
-            <div class="sat-info-value" id="sat-dryMass">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="How Long the Satellite was Expected to be Operational">
-              Life Expectancy
-            </div>
-            <div class="sat-info-value" id="sat-lifetime">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Satellite Bus">
-              Bus
-            </div>
-            <div class="sat-info-value" id="sat-bus">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Primary Payload">
-              Payload
-            </div>
-            <div class="sat-info-value" id="sat-payload">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Primary Motor">
-              Motor
-            </div>
-            <div class="sat-info-value" id="sat-motor">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Length in Meters">
-              Length
-            </div>
-            <div class="sat-info-value" id="sat-length">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Diameter in Meters">
-              Diameter
-            </div>
-            <div class="sat-info-value" id="sat-diameter">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Span in Meters">
-              Span
-            </div>
-            <div class="sat-info-value" id="sat-span">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Description of Shape">
-              Shape
-            </div>
-            <div class="sat-info-value" id="sat-shape">
-              NO DATA
-            </div>
-          </div>
-          <div class="sat-info-row sat-only-info">
-            <div class="sat-info-key" data-position="top" data-delay="50"
-              data-tooltip="Power of the Satellite">
-              Power
-            </div>
-            <div class="sat-info-value" id="sat-power">
-              NO DATA
-            </div>
-          </div>
-        </div>
-        `,
-    );
   }
 
   private static updateSensorInfo_(obj: BaseObject) {
